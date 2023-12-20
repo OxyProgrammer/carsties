@@ -33,8 +33,6 @@ app.Lifetime.ApplicationStarted.Register(async () =>
 app.Run();
 
 
-
-
 static IAsyncPolicy<HttpResponseMessage> GetPolicy() =>
             HttpPolicyExtensions
             .HandleTransientHttpError()
