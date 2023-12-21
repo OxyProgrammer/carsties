@@ -4,6 +4,7 @@ using SearchService.Data;
 using SearchService.Services;
 using MassTransit;
 using SearchService;
+using SearchService.Consumers;
 
 var builder = WebApplication.CreateBuilder(args);
 
