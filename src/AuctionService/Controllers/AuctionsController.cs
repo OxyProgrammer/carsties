@@ -3,6 +3,8 @@ using AuctionService.DTOs;
 using AuctionService.Entities;
 using AutoMapper;
 using AutoMapper.QueryableExtensions;
+using Contracts;
+using MassTransit;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -14,8 +16,10 @@ public class AuctionsController : ControllerBase
 {
     private readonly AuctionDbContext _context;
     private readonly IMapper _mapper;
+    private readonly IPublishEndpoint _publishEndpoint;
 
-    public AuctionsController(AuctionDbContext context, IMapper mapper)
+    public AuctionsController(AuctionDbContext context, IMapper mapper,
+        IPublishEndpoint publishEndpoint)
     {
         if (context is null)
         {
@@ -29,6 +33,7 @@ public class AuctionsController : ControllerBase
 
         _context = context;
         _mapper = mapper;
+        _publishEndpoint = publishEndpoint;
     }
 
     [HttpGet]
@@ -68,20 +73,32 @@ public class AuctionsController : ControllerBase
     public async Task<ActionResult<AuctionDto>> CreateAuction(CreateAuctionDto auctionDto)
     {
         var auction = _mapper.Map<Auction>(auctionDto);
-        //ToDo: Add current user as seller
 
-        auction.Seller = "Test";
+        auction.Seller = User.Identity.Name;
+
         _context.Auctions.Add(auction);
 
+        var newAuction = _mapper.Map<AuctionDto>(auction);
+        try
+        {
+            //Publish to queue. Due to mass transit outbox functionality its safe to publish before saving the changes.
+            //In fact its good- if the event bus is down, the request fails and its not saved even to the acution service DB.
+            await _publishEndpoint.Publish(_mapper.Map<AuctionCreated>(newAuction));
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.ToString());
+        }
         var result = await _context.SaveChangesAsync() > 0;
+
         if (!result)
         {
-            return BadRequest("Could not save changes to the DB.");
+            return BadRequest("Could not save changes to the DB");
         }
-        return CreatedAtAction(nameof(GetAuctionById),
-            new { auction.Id }, _mapper.Map<AuctionDto>(auction));
-    }
 
+        return CreatedAtAction(nameof(GetAuctionById),
+            new { auction.Id }, newAuction);
+    }
 
     [HttpPut("{id}")]
     public async Task<ActionResult> UpdateAction(Guid id, UpdateAuctionDto updateAuctionDto)
