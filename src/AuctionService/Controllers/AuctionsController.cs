@@ -5,6 +5,7 @@ using AutoMapper;
 using AutoMapper.QueryableExtensions;
 using Contracts;
 using MassTransit;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -69,6 +70,7 @@ public class AuctionsController : ControllerBase
         return _mapper.Map<AuctionDto>(auction);
     }
 
+    [Authorize]
     [HttpPost]
     public async Task<ActionResult<AuctionDto>> CreateAuction(CreateAuctionDto auctionDto)
     {
@@ -100,6 +102,7 @@ public class AuctionsController : ControllerBase
             new { auction.Id }, newAuction);
     }
 
+    [Authorize]
     [HttpPut("{id}")]
     public async Task<ActionResult> UpdateAction(Guid id, UpdateAuctionDto updateAuctionDto)
     {
@@ -111,7 +114,10 @@ public class AuctionsController : ControllerBase
             return NotFound();
         }
 
-        //ToDo: Check if seller = username
+        if (auction.Seller != User.Identity.Name)
+        {
+            return Unauthorized("You arent authorized, you piece of sh!t");
+        }
 
         auction.Item.Make = updateAuctionDto.Make ?? auction.Item.Make;
         auction.Item.Model = updateAuctionDto.Model ?? auction.Item.Model;
@@ -131,7 +137,7 @@ public class AuctionsController : ControllerBase
 
         return BadRequest($"Auction with id {id} could not be updated");
     }
-
+    [Authorize]
     [HttpDelete("{id}")]
     public async Task<ActionResult> DeleteAuction(Guid id)
     {
@@ -139,6 +145,10 @@ public class AuctionsController : ControllerBase
         if (null == auction)
         {
             return NotFound();
+        }
+        if (auction.Seller != User.Identity.Name)
+        {
+            return Unauthorized("You arent authorized, you piece of sh!t");
         }
         _context.Auctions.Remove(auction);
 
