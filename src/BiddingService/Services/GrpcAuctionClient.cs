@@ -15,16 +15,16 @@ public class GrpcAuctionClient
         _config = config;
     }
 
-    public Auction GetAuction(string id)
+    public async Task<Auction> GetAuction(string id)
     {
         _logger.LogInformation("Calling GRPC Service");
         var channel = GrpcChannel.ForAddress(_config["GrpcAuction"]);
         var client = new GrpcAuction.GrpcAuctionClient(channel);
-        var request = new GetAuctionRequest{Id = id};
+        var request = new GetAuctionRequest { Id = id };
 
         try
         {
-            var reply = client.GetAuction(request);
+            var reply = await client.GetAuctionAsync(request);
             var auction = new Auction
             {
                 ID = reply.Auction.Id,
