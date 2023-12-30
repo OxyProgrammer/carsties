@@ -17,9 +17,13 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("customPolicy", b =>
     {
-        b.AllowAnyHeader()
-        .AllowAnyMethod()
-        .WithOrigins(builder.Configuration["ClientApp"]);
+        // b.AllowAnyHeader()
+        // .AllowAnyMethod()
+        // .AllowAnyOrigin();
+        b.AllowAnyMethod()
+           .AllowAnyHeader()
+           .SetIsOriginAllowed(origin => true)
+           .AllowCredentials();
     });
 });
 
